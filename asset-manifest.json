@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/panpages/static/js/main.5348cda0.js",
+    "main.js": "/panpages/static/js/main.19044743.js",
     "index.html": "/panpages/index.html",
-    "main.5348cda0.js.map": "/panpages/static/js/main.5348cda0.js.map"
+    "main.19044743.js.map": "/panpages/static/js/main.19044743.js.map"
   },
   "entrypoints": [
-    "static/js/main.5348cda0.js"
+    "static/js/main.19044743.js"
   ]
 }
