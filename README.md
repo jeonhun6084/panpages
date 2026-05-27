@@ -1,70 +1,93 @@
-# Getting Started with Create React App
+# PanPages
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+스트리머 팬페이지 — 유튜브 영상, SOOP 라이브 알람, SOOP 게시판 갤러리를 한 곳에서.
 
-## Available Scripts
+**배포:** https://jeonhun6084.github.io/panpages
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## 기능
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+| 페이지 | 설명 |
+|--------|------|
+| **영상** | 유튜브 영상 URL을 추가·관리하고 인앱 플레이어로 재생 |
+| **라이브** | SOOP 방송국 ID를 등록해 방송 중 여부 확인 및 알람 |
+| **갤러리** | SOOP 게시판을 자동 스크래핑해 카드형 UI로 재구성 |
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## 기술 스택
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **프론트엔드:** React 18, React Router v6, GitHub Pages
+- **백엔드:** Node.js, Express, Puppeteer (갤러리 스크래핑용)
 
-### `npm run build`
+---
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## 로컬 실행
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### 프론트엔드
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```bash
+npm install
+npm start
+# http://localhost:3000
+```
 
-### `npm run eject`
+### 백엔드 (갤러리 기능 사용 시 필요)
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+```bash
+cd server
+cp .env.example .env   # SOOP_ID, SOOP_PW 입력
+npm install
+npm start
+# http://localhost:3001
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+`.env` 설정:
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+```
+SOOP_ID=본인_SOOP_아이디
+SOOP_PW=본인_비밀번호
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+---
 
-## Learn More
+## 갤러리 동작 방식
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+1. **첫 요청** — Puppeteer가 Chromium을 실행해 SOOP에 자동 로그인, 쿠키를 `server/cookies.json`에 저장
+2. **이후 요청** — 저장된 쿠키를 재사용해 로그인 없이 바로 스크래핑 (빠름)
+3. **쿠키 만료 시** — 갤러리 페이지의 "쿠키 초기화" 버튼으로 재로그인
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+> 처음 실행 시 Chromium 구동으로 30초~1분 소요될 수 있습니다.
 
-### Code Splitting
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+## 배포
 
-### Analyzing the Bundle Size
+```bash
+npm run deploy   # GitHub Pages 빌드 + 배포
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+백엔드는 GitHub Pages에 포함되지 않으며, 갤러리 기능은 로컬 서버 실행 환경에서만 동작합니다.
 
-### Making a Progressive Web App
+---
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+## 프로젝트 구조
 
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+```
+panpages/
+├── src/
+│   ├── pages/
+│   │   ├── Videos.js      # 유튜브 영상 관리
+│   │   ├── Live.js        # SOOP 라이브 알람
+│   │   └── Gallery.js     # SOOP 게시판 카드 갤러리
+│   ├── components/
+│   │   └── Navbar.js
+│   ├── App.js
+│   └── App.css
+└── server/
+    ├── index.js           # Express 서버 (port 3001)
+    ├── soop.js            # Puppeteer 스크래퍼
+    ├── .env.example
+    └── package.json
+```
