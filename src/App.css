@@ -687,6 +687,21 @@ body {
   line-height: 1.6;
 }
 
+/* ── Gallery iframe ── */
+.gallery-iframe-wrap {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.gallery-iframe {
+  width: 100%;
+  height: 80vh;
+  border: none;
+  display: block;
+}
+
 /* ── Responsive ── */
 @media (max-width: 600px) {
   .navbar {

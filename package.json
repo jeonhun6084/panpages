@@ -39,5 +39,6 @@
       "last 1 safari version"
     ]
   },
-  "homepage": "https://jeonhun6084.github.io/panpages"
+  "homepage": "https://jeonhun6084.github.io/panpages",
+  "proxy": "http://localhost:3001"
 }
