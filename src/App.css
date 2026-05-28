@@ -19,6 +19,20 @@
   --green: #2ed573;
 }
 
+[data-theme="light"] {
+  --bg: #f2f2f8;
+  --bg2: #e8e8f4;
+  --card: #ffffff;
+  --card-hover: #f8f8ff;
+  --border: #d8d8e8;
+  --text: #1a1a2e;
+  --text-muted: #66667a;
+}
+
+[data-theme="light"] .navbar {
+  background: rgba(242, 242, 248, 0.9);
+}
+
 body {
   background: var(--bg);
   color: var(--text);
@@ -249,7 +263,7 @@ body {
 .video-info {
   padding: 0.85rem 1rem;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
 }
@@ -700,6 +714,175 @@ body {
   height: 80vh;
   border: none;
   display: block;
+}
+
+/* ── Theme toggle ── */
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.3rem 0.55rem;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover {
+  background: var(--card);
+  border-color: var(--pink);
+}
+
+/* ── Tag chips (카드 위) ── */
+.tag-list {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.tag-chip {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: rgba(233, 30, 140, 0.1);
+  border: 1px solid rgba(233, 30, 140, 0.2);
+  border-radius: 20px;
+  font-size: 0.72rem;
+  color: var(--pink);
+  white-space: nowrap;
+}
+
+/* ── Tag filter row (영상 페이지) ── */
+.tag-filter {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.tag-filter-chip {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag-filter-chip.active {
+  background: rgba(233, 30, 140, 0.12);
+  border-color: var(--pink);
+  color: var(--pink);
+}
+
+.tag-filter-chip:hover:not(.active) {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
+/* ── Drag & drop ── */
+.video-card.dragging {
+  opacity: 0.4;
+  border-color: var(--pink);
+}
+
+.video-card.drag-over {
+  border-color: var(--purple);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(155, 89, 182, 0.2);
+}
+
+/* ── Select / Search input ── */
+.select-input {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 0.75rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.select-input:focus {
+  border-color: var(--pink);
+}
+
+.search-input {
+  flex: 1;
+  min-width: 160px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  border-color: var(--pink);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ── Gallery search bar ── */
+.gallery-search {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+/* ── Channel grid (라이브 멀티채널) ── */
+.channel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.channel-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.channel-card.channel-live {
+  border-color: var(--red);
+  box-shadow: 0 0 20px rgba(255, 71, 87, 0.12);
+}
+
+.channel-banner {
+  position: relative;
+}
+
+.channel-banner img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  display: block;
+}
+
+.channel-info {
+  padding: 1rem 1.25rem;
+}
+
+.channel-footer {
+  padding: 0.75rem 1.25rem 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 /* ── Responsive ── */
