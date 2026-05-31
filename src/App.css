@@ -841,6 +841,75 @@ body {
   flex-wrap: wrap;
 }
 
+/* ── Gallery board tabs ── */
+.gallery-board-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.gallery-board-tag {
+  display: inline-block;
+  background: rgba(233, 30, 140, 0.1);
+  color: var(--pink);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 0.72rem;
+}
+
+.gallery-img-placeholder {
+  height: 140px;
+  background: var(--border);
+}
+
+/* ── Lightbox 슬라이드쇼 ── */
+.lightbox-img-wrap {
+  position: relative;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+}
+
+.lightbox-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(0,0,0,0.5);
+  border: none;
+  color: #fff;
+  font-size: 2rem;
+  line-height: 1;
+  padding: 0.25rem 0.6rem;
+  cursor: pointer;
+  z-index: 10;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.lightbox-nav:hover { background: rgba(0,0,0,0.8); }
+.lightbox-prev { left: 0.5rem; }
+.lightbox-next { right: 0.5rem; }
+
+.lightbox-dots {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.lightbox-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: var(--border);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+}
+.lightbox-dot.active { background: var(--pink); }
+
 /* ── Channel grid (라이브 멀티채널) ── */
 .channel-grid {
   display: grid;
