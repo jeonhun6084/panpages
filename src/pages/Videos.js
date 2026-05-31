@@ -101,30 +101,32 @@ function Videos() {
         <p>유튜브 링크를 추가해서 나만의 영상 컬렉션을 만들어보세요.</p>
       </div>
 
-      <div className="add-form">
-        <input
-          type="text"
-          placeholder="유튜브 링크 (https://youtu.be/...)"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-        />
-        <input
-          type="text"
-          placeholder="영상 제목 (선택)"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-        />
-        <input
-          type="text"
-          placeholder="태그 (예: 게임,토크)"
-          value={tagsInput}
-          onChange={(e) => setTagsInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          style={{ maxWidth: "180px" }}
-        />
-        <button className="btn" onClick={add}>추가</button>
+      <div className="form-section">
+        <div className="add-form">
+          <input
+            type="text"
+            placeholder="유튜브 링크 (https://youtu.be/...)"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+          />
+          <input
+            type="text"
+            placeholder="영상 제목 (선택)"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+          />
+          <input
+            type="text"
+            placeholder="태그 (예: 게임,토크)"
+            value={tagsInput}
+            onChange={(e) => setTagsInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            style={{ maxWidth: "180px" }}
+          />
+          <button className="btn" onClick={add}>추가</button>
+        </div>
       </div>
 
       {allTags.length > 1 && (

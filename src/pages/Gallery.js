@@ -304,14 +304,24 @@ function Gallery() {
             onChange={(e) => setQuery(e.target.value)}
             className="search-input"
           />
-          <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="select-input">
-            <option value="all">전체 기간</option>
-            <option value="7d">최근 7일</option>
-            <option value="30d">최근 30일</option>
-            <option value="3m">최근 3개월</option>
-          </select>
-          {(query || dateFilter !== "all") && (
-            <button className="btn btn-ghost btn-sm" onClick={() => { setQuery(""); setDateFilter("all"); }}>
+          <div className="date-filter-chips">
+            {[
+              { value: "7d", label: "7일" },
+              { value: "30d", label: "30일" },
+              { value: "3m", label: "3개월" },
+              { value: "all", label: "전체" },
+            ].map(({ value, label }) => (
+              <button
+                key={value}
+                className={`tag-filter-chip${dateFilter === value ? " active" : ""}`}
+                onClick={() => setDateFilter(value)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {query && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setQuery("")}>
               초기화
             </button>
           )}
