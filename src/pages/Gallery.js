@@ -222,6 +222,8 @@ function Gallery() {
     hasMoreRef.current = true;
     setHasMore(true);
     setLoaded(false);
+    setQuery("");
+    setDateFilter("all");
     fetchPosts(currentBjIdRef.current, apiBbsNo, 1);
   };
 
@@ -366,13 +368,16 @@ function Gallery() {
               <PostCard key={`${post.titleNo}-${i}`} post={post} onOpen={setLightbox} />
             ))}
           </div>
-          <div ref={sentinelRef} style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            {loading && <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>더 불러오는 중...</span>}
-            {!loading && !hasMore && (
-              <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>전체 로드 완료 ({posts.length}개)</span>
-            )}
-          </div>
         </>
+      )}
+
+      {loaded && posts.length > 0 && (
+        <div ref={sentinelRef} style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {loading && <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>더 불러오는 중...</span>}
+          {!loading && !hasMore && (
+            <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>전체 로드 완료 ({posts.length}개)</span>
+          )}
+        </div>
       )}
 
       {lightbox && <Lightbox post={lightbox} onClose={() => setLightbox(null)} />}
