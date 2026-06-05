@@ -10,6 +10,20 @@ async function fetchStation(bjId) {
   return res.json();
 }
 
+async function fetchLatestVodThumb(bjId) {
+  try {
+    const res = await fetch(`https://bjapi.afreecatv.com/api/${bjId}/vods?page=1&per=1`, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return "";
+    const data = await res.json();
+    const thumb = data?.data?.[0]?.ucc?.thumb;
+    return thumb ? (thumb.startsWith("//") ? "https:" + thumb : thumb) : "";
+  } catch {
+    return "";
+  }
+}
+
 function ChannelCard({ bjId, status, notifOn, onRemove, onRefresh, onToggleNotif }) {
   return (
     <div className={`channel-card${status?.isLive ? " channel-live" : ""}`}>
@@ -43,14 +57,32 @@ function ChannelCard({ bjId, status, notifOn, onRemove, onRefresh, onToggleNotif
           </div>
         </>
       ) : (
-        <div className="channel-info">
-          <div className="offline-badge" style={{ marginBottom: "0.6rem" }}>⚫ 오프라인</div>
-          <div className="live-nickname" style={{ marginBottom: "0.3rem" }}>{status.nickname || bjId}</div>
-          <p style={{ fontSize: "0.82rem", color: "var(--text-muted)" }}>현재 방송 중이 아닙니다.</p>
-          {status.error && (
-            <p style={{ fontSize: "0.78rem", color: "var(--red)", marginTop: "0.4rem" }}>{status.error}</p>
-          )}
-        </div>
+        <>
+          <div className="channel-banner">
+            {status.vodThumb ? (
+              <img src={status.vodThumb} alt="최근 방송 썸네일" style={{ opacity: 0.7 }} />
+            ) : status.profileImg ? (
+              <div className="live-banner-placeholder">
+                <img src={status.profileImg} alt={status.nickname} style={{ width: 64, height: 64, borderRadius: "50%", objectFit: "cover", border: "2px solid var(--border)" }} />
+              </div>
+            ) : (
+              <div className="live-banner-placeholder">📺</div>
+            )}
+            <div className="offline-badge" style={{ position: "absolute", top: "0.75rem", left: "0.75rem", marginBottom: 0 }}>⚫ 오프라인</div>
+          </div>
+          <div className="channel-info">
+            <div className="live-profile">
+              {status.profileImg
+                ? <img src={status.profileImg} alt={status.nickname} />
+                : <div className="live-profile-placeholder">👤</div>
+              }
+              <span className="live-nickname">{status.nickname || bjId}</span>
+            </div>
+            {status.error && (
+              <p style={{ fontSize: "0.78rem", color: "var(--red)" }}>{status.error}</p>
+            )}
+          </div>
+        </>
       )}
 
       <div className="channel-footer">
@@ -90,15 +122,24 @@ function Live() {
 
   const checkChannel = useCallback(async (bjId) => {
     try {
-      const data = await fetchStation(bjId);
+      const [data, vodThumb] = await Promise.all([
+        fetchStation(bjId),
+        fetchLatestVodThumb(bjId),
+      ]);
       const isLive = !!data.broad;
+      const liveThumb = data.broad?.broad_thumb
+        ? (data.broad.broad_thumb.startsWith("//") ? "https:" + data.broad.broad_thumb : data.broad.broad_thumb)
+        : "";
       setStatuses(prev => ({
         ...prev,
         [bjId]: {
           isLive,
           title: data.broad?.broad_title || "",
-          thumb: data.broad?.broad_thumb || "",
-          profileImg: data.profile_image || "",
+          thumb: liveThumb,
+          vodThumb,
+          profileImg: data.profile_image
+            ? (data.profile_image.startsWith("//") ? "https:" + data.profile_image : data.profile_image)
+            : "",
           nickname: data.station?.user_nick || bjId,
           error: null,
         },

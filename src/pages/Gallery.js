@@ -189,6 +189,11 @@ function Gallery() {
     obsRef.current.observe(node);
   }, []);
 
+  const resetFilters = () => {
+    setQuery("");
+    setDateFilter("all");
+  };
+
   const search = async () => {
     const id = bjIdInput.trim();
     if (!id) return;
@@ -200,8 +205,7 @@ function Gallery() {
     hasMoreRef.current = true;
     setHasMore(true);
     setLoaded(false);
-    setQuery("");
-    setDateFilter("all");
+    resetFilters();
 
     const list = await fetchBoards(id);
     const first = list.length > 0 ? list[0] : null;
@@ -222,8 +226,7 @@ function Gallery() {
     hasMoreRef.current = true;
     setHasMore(true);
     setLoaded(false);
-    setQuery("");
-    setDateFilter("all");
+    resetFilters();
     fetchPosts(currentBjIdRef.current, apiBbsNo, 1);
   };
 
@@ -371,12 +374,14 @@ function Gallery() {
         </>
       )}
 
-      {loaded && posts.length > 0 && (
+      {loaded && hasMore && (
         <div ref={sentinelRef} style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
           {loading && <span style={{ color: "var(--text-muted)", fontSize: "0.85rem" }}>더 불러오는 중...</span>}
-          {!loading && !hasMore && (
-            <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>전체 로드 완료 ({posts.length}개)</span>
-          )}
+        </div>
+      )}
+      {loaded && !hasMore && posts.length > 0 && (
+        <div style={{ height: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <span style={{ color: "var(--text-muted)", fontSize: "0.82rem" }}>전체 로드 완료 ({posts.length}개)</span>
         </div>
       )}
 

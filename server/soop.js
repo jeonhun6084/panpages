@@ -204,12 +204,13 @@ async function getBoardPosts(bjId, boardNo, page, cookieHeader) {
       };
     });
 
+  const m = r.data.meta || {};
   return {
     posts,
-    total: r.data.total || 0,
-    lastPage: r.data.lastPage || 1,
-    currentPage: r.data.currentPage || page,
-    perPage: r.data.perPage || 20,
+    total: m.totalItems || 0,
+    lastPage: m.totalPages || 1,
+    currentPage: m.currentPage || page,
+    perPage: m.itemsPerPage || 20,
   };
 }
 
