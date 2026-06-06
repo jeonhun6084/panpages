@@ -10,8 +10,21 @@ async function fetchStation(bjId) {
   return res.json();
 }
 
+const THUMB_REFRESH_MS = 30_000;
+
 function ChannelCard({ bjId, status, notifOn, onRemove, onRefresh, onToggleNotif }) {
   const stationUrl = `https://www.sooplive.com/station/${bjId}`;
+  const [liveThumb, setLiveThumb] = useState("");
+
+  useEffect(() => {
+    if (!status?.isLive || !status?.broadNo) { setLiveThumb(""); return; }
+    const refresh = () =>
+      setLiveThumb(`https://liveimg.sooplive.com/m/${status.broadNo}?t=${Date.now()}`);
+    refresh();
+    const id = setInterval(refresh, THUMB_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [status?.isLive, status?.broadNo]);
+
   const profileLink = (children) => (
     <a className="live-profile" href={stationUrl} target="_blank" rel="noopener noreferrer"
       style={{ textDecoration: "none", color: "inherit" }}>
@@ -28,8 +41,10 @@ function ChannelCard({ bjId, status, notifOn, onRemove, onRefresh, onToggleNotif
       ) : status.isLive ? (
         <>
           <div className="channel-banner">
-            {status.thumb
-              ? <img src={status.thumb} alt="방송 썸네일" />
+            {liveThumb
+              ? <img src={liveThumb} alt="라이브 화면"
+                  onError={(e) => { e.target.style.display = "none"; }}
+                />
               : <div className="live-banner-placeholder">📺</div>
             }
             <div className="live-badge"><span className="live-dot" />LIVE</div>
@@ -110,8 +125,8 @@ function Live() {
         ...prev,
         [bjId]: {
           isLive,
+          broadNo: data.broad?.broad_no || null,
           title: data.broad?.broad_title || "",
-          thumb: normalizeUrl(data.broad?.broad_thumb || ""),
           profileImg: normalizeUrl(data.profile_image || ""),
           nickname: data.station?.user_nick || bjId,
           error: null,
