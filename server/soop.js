@@ -127,12 +127,24 @@ async function validateCookies(cookieHeader) {
 async function getBoards(bjId, cookieHeader) {
   const r = await apiGet(`${API_BASE}/${bjId}/menu`, cookieHeader);
   if (r.status !== 200 || !r.data) return [];
-  return (r.data.board || []).map(b => ({
-    bbsNo: b.bbsNo,
-    name: b.name || '전체',
-    displayType: b.displayType,
-    authNo: b.authNo,
-  }));
+
+  let saw106 = false;
+  const result = [];
+  for (const b of (r.data.board || [])) {
+    if (b.displayType === 105) continue;            // VOD 저장소
+    if ((b.name || '').includes('공지')) continue;  // 공지 게시판
+    if (b.displayType === 106) {
+      if (saw106) continue;                         // 중복 전체 게시판
+      saw106 = true;
+    }
+    result.push({
+      bbsNo: b.bbsNo,
+      name: b.name || '전체',
+      displayType: b.displayType,
+      authNo: b.authNo,
+    });
+  }
+  return result;
 }
 
 // ---------- 게시글 목록 조회 ----------

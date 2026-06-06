@@ -161,8 +161,25 @@ function Gallery() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "게시판 목록 오류");
       const list = data.boards || [];
-      setBoards(list);
-      return list;
+      if (list.length === 0) { setBoards([]); return []; }
+
+      // 게시글 없는 탭 제거: 각 게시판 첫 페이지 병렬 확인
+      const checked = await Promise.all(
+        list.map(async (board) => {
+          try {
+            const bbsNo = board.displayType === 106 ? null : board.bbsNo;
+            const params = new URLSearchParams({ page: 1 });
+            if (bbsNo) params.set("bbsNo", bbsNo);
+            const r = await fetch(`${API_BASE}/api/posts/${bjId}?${params}`);
+            const d = await r.json();
+            return r.ok && (d.total || 0) > 0 ? board : null;
+          } catch { return null; }
+        })
+      );
+
+      const filtered = checked.filter(Boolean);
+      setBoards(filtered);
+      return filtered;
     } catch {
       setBoards([]);
       return [];
