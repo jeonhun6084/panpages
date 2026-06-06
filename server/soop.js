@@ -175,9 +175,26 @@ function extractImages(post) {
 
 function extractThumbnail(images) {
   if (!images.length) return '';
-  // GIF 우선 (animated content)
   const gif = images.find(u => /\.gif(\?|$)/i.test(u));
   return gif || images[0];
+}
+
+function extractText(post) {
+  const html = (post.content && post.content.content) || '';
+  if (!html) return '';
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x([0-9a-f]+);/gi, (_, h) => { try { return String.fromCodePoint(parseInt(h, 16)); } catch { return ''; } })
+    .replace(/&#([0-9]+);/g, (_, d) => { try { return String.fromCodePoint(parseInt(d, 10)); } catch { return ''; } })
+    .replace(/&[a-z]+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 300);
 }
 
 const SKIP_PREFIXES = ['[캐치]', '[클립]', '[Catch]', '[CATCH]'];
@@ -199,20 +216,21 @@ async function getBoardPosts(bjId, boardNo, page, cookieHeader) {
     .map(item => {
       const images = extractImages(item);
       return {
-      titleNo: item.titleNo,
-      title: item.titleName || '',
-      author: item.userNick || '',
-      authorId: item.userId || '',
-      profileImage: item.profileImage || '',
-      thumbnail: extractThumbnail(images),
-      images,
-      date: item.regDate || '',
-      views: String(item.count ? item.count.readCnt : 0),
-      comments: String(item.count ? item.count.commentCnt : 0),
-      likes: String(item.count ? item.count.likeCnt : 0),
-      photoCnt: item.photoCnt || 0,
-      boardName: item.display ? item.display.bbsName : '',
-      url: `https://www.sooplive.com/station/${bjId}/post/${item.titleNo}`,
+        titleNo: item.titleNo,
+        title: item.titleName || '',
+        text: extractText(item),
+        author: item.userNick || '',
+        authorId: item.userId || '',
+        profileImage: item.profileImage || '',
+        thumbnail: extractThumbnail(images),
+        images,
+        date: item.regDate || '',
+        views: String(item.count ? item.count.readCnt : 0),
+        comments: String(item.count ? item.count.commentCnt : 0),
+        likes: String(item.count ? item.count.likeCnt : 0),
+        photoCnt: item.photoCnt || 0,
+        boardName: item.display ? item.display.bbsName : '',
+        url: `https://www.sooplive.com/station/${bjId}/post/${item.titleNo}`,
       };
     });
 

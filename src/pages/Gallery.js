@@ -18,6 +18,9 @@ function PostCard({ post, onOpen }) {
       )}
       <div className="gallery-item-body">
         <div className="gallery-item-title">{post.title}</div>
+        {post.text && (
+          <div className="gallery-item-text">{post.text}</div>
+        )}
         <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
           {post.author && <span style={{ marginRight: "0.5rem" }}>{post.author}</span>}
           {post.boardName && <span className="gallery-board-tag">{post.boardName}</span>}

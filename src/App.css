@@ -637,6 +637,17 @@ body {
   line-height: 1.4;
 }
 
+.gallery-item-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin: 0.35rem 0 0.25rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
 .gallery-img-placeholder {
   height: 120px;
   background: var(--bg2);
