@@ -4,28 +4,38 @@ const API_BASE = "http://localhost:3001";
 
 function PostCard({ post, onOpen }) {
   return (
-    <div className="gallery-item" onClick={() => onOpen(post)} style={{ cursor: "pointer" }}>
-      {post.thumbnail ? (
-        <img
-          src={post.thumbnail}
-          alt={post.title}
-          className="gallery-img"
-          loading="lazy"
-          onError={(e) => { e.target.style.display = "none"; }}
-        />
-      ) : (
-        <div className="gallery-img gallery-img-placeholder" />
-      )}
-      <div className="gallery-item-body">
-        <div className="gallery-item-title">{post.title}</div>
+    <div className="gallery-item">
+      <div className="gallery-item-img" onClick={() => onOpen(post)}>
+        {post.thumbnail ? (
+          <img
+            src={post.thumbnail}
+            alt={post.title}
+            className="gallery-img"
+            loading="lazy"
+            onError={(e) => { e.target.style.display = "none"; }}
+          />
+        ) : (
+          <div className="gallery-img-placeholder" />
+        )}
+        {post.images && post.images.length > 1 && (
+          <div className="gallery-img-count">+{post.images.length - 1}</div>
+        )}
+      </div>
+      <div className="gallery-item-content">
+        <a
+          className="gallery-item-title"
+          href={post.url}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {post.title}
+        </a>
         {post.text && (
           <div className="gallery-item-text">{post.text}</div>
         )}
-        <div style={{ fontSize: "0.8rem", color: "var(--text-muted)", marginTop: "0.25rem" }}>
-          {post.author && <span style={{ marginRight: "0.5rem" }}>{post.author}</span>}
+        <div className="gallery-item-meta">
+          {post.author && <span>{post.author}</span>}
           {post.boardName && <span className="gallery-board-tag">{post.boardName}</span>}
-        </div>
-        <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginTop: "0.4rem", fontSize: "0.8rem", color: "var(--text-muted)" }}>
           {post.views && <span>👁 {post.views}</span>}
           {post.comments && <span>💬 {post.comments}</span>}
           {post.likes && post.likes !== "0" && <span>❤️ {post.likes}</span>}

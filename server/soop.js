@@ -193,8 +193,7 @@ function extractText(post) {
     .replace(/&#([0-9]+);/g, (_, d) => { try { return String.fromCodePoint(parseInt(d, 10)); } catch { return ''; } })
     .replace(/&[a-z]+;/gi, ' ')
     .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 300);
+    .trim();
 }
 
 const SKIP_PREFIXES = ['[캐치]', '[클립]', '[Catch]', '[CATCH]'];
