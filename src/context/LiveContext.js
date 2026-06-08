@@ -5,6 +5,29 @@ export const useLive = () => useContext(LiveContext);
 
 const POLL_MS = 60_000;
 const THUMB_REFRESH_MS = 30_000;
+const HISTORY_KEY = "fp-live-history";
+const HISTORY_MAX = 200;
+
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [880, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + i * 0.12);
+      gain.gain.linearRampToValueAtTime(0.18, now + i * 0.12 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.5);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.12);
+      osc.stop(now + i * 0.12 + 0.5);
+    });
+    setTimeout(() => ctx.close(), 1000);
+  } catch {}
+}
 
 async function fetchStation(bjId) {
   const res = await fetch(`https://bjapi.afreecatv.com/api/${bjId}/station`, {
@@ -26,6 +49,12 @@ export function LiveProvider({ children }) {
   });
   const [statuses, setStatuses] = useState({});
   const [notifChannels, setNotifChannels] = useState({});
+  const [history, setHistory] = useState(() => {
+    try {
+      const saved = localStorage.getItem(HISTORY_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const prevLiveRef = useRef({});
 
   const saveChannels = (list) => {
@@ -73,17 +102,30 @@ export function LiveProvider({ children }) {
 
   useEffect(() => {
     Object.entries(statuses).forEach(([bjId, st]) => {
-      if (!notifChannels[bjId] || !st) return;
+      if (!st) return;
       const prev = prevLiveRef.current[bjId];
       if (prev === false && st.isLive) {
-        new Notification("🔴 방송 시작!", {
-          body: `${st.nickname}님이 방송을 시작했습니다!\n${st.title}`,
-          icon: st.profileImg || undefined,
+        setHistory(curr => {
+          const next = [{ bjId, nickname: st.nickname, profileImg: st.profileImg, title: st.title, startedAt: Date.now() }, ...curr].slice(0, HISTORY_MAX);
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+          return next;
         });
+        if (notifChannels[bjId]) {
+          playChime();
+          new Notification("🔴 방송 시작!", {
+            body: `${st.nickname}님이 방송을 시작했습니다!\n${st.title}`,
+            icon: st.profileImg || undefined,
+          });
+        }
       }
       prevLiveRef.current[bjId] = st.isLive;
     });
   }, [statuses, notifChannels]);
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem(HISTORY_KEY);
+  };
 
   useEffect(() => {
     if (channels.length === 0) return;
@@ -105,8 +147,8 @@ export function LiveProvider({ children }) {
 
   return (
     <LiveContext.Provider value={{
-      channels, statuses, notifChannels, liveCount,
-      addChannel, removeChannel, checkChannel, toggleNotif,
+      channels, statuses, notifChannels, liveCount, history,
+      addChannel, removeChannel, checkChannel, toggleNotif, clearHistory,
       THUMB_REFRESH_MS,
     }}>
       {children}

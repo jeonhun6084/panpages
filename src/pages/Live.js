@@ -4,6 +4,64 @@ import Icon from "../components/Icon";
 
 const THUMB_REFRESH_MS = 30_000;
 
+function formatHistoryClock(ts) {
+  const d = new Date(ts);
+  const now = new Date();
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  const time = d.toLocaleTimeString("ko-KR", { hour: "numeric", minute: "2-digit" });
+  if (sameDay(d, now)) return `오늘 ${time}`;
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (sameDay(d, yesterday)) return `어제 ${time}`;
+  return `${d.getMonth() + 1}/${d.getDate()} ${time}`;
+}
+
+function formatHistoryRelative(ts) {
+  const diffMin = Math.floor((Date.now() - ts) / 60_000);
+  if (diffMin < 1) return "방금 전";
+  if (diffMin < 60) return `${diffMin}분 전`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}시간 전`;
+  return `${Math.floor(diffHr / 24)}일 전`;
+}
+
+function HistoryPanel({ history, onClear }) {
+  const [open, setOpen] = useState(false);
+  if (history.length === 0) return null;
+
+  return (
+    <div className="live-history">
+      <button className={`live-history-toggle${open ? " open" : ""}`} onClick={() => setOpen(o => !o)}>
+        <span>방송 시작 기록 <span className="live-history-count">{history.length}</span></span>
+        <span className={`notice-row-chevron${open ? " open" : ""}`}>›</span>
+      </button>
+      {open && (
+        <>
+          <div className="live-history-list">
+            {history.map((h, i) => (
+              <div key={`${h.bjId}-${h.startedAt}-${i}`} className="live-history-row">
+                {h.profileImg ? (
+                  <img src={h.profileImg} alt={h.nickname} className="live-history-avatar" />
+                ) : (
+                  <div className="live-history-avatar-placeholder"><Icon name="user" size={13} /></div>
+                )}
+                <span className="live-history-nickname">{h.nickname}</span>
+                <span className="live-history-title">{h.title || "방송 시작"}</span>
+                <span className="live-history-time" title={new Date(h.startedAt).toLocaleString("ko-KR")}>
+                  {formatHistoryRelative(h.startedAt)} · {formatHistoryClock(h.startedAt)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="live-history-footer">
+            <button className="btn btn-ghost btn-sm" onClick={onClear}>기록 지우기</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function PlayerModal({ bjId, broadNo, title, nickname, profileImg, onClose }) {
   const [thumb, setThumb] = useState(
     broadNo ? `https://liveimg.sooplive.com/m/${broadNo}?t=${Date.now()}` : ""
@@ -69,6 +127,92 @@ function PlayerModal({ bjId, broadNo, title, nickname, profileImg, onClose }) {
           <button className="btn btn-sm" onClick={openPlayer}>▶ 플레이어 열기</button>
         </div>
       </div>
+    </div>
+  );
+}
+
+function MultiViewTile({ bjId, status }) {
+  const [active, setActive] = useState(false);
+  const [thumb, setThumb] = useState("");
+
+  useEffect(() => {
+    if (active || !status?.broadNo) return;
+    const refresh = () => setThumb(`https://liveimg.sooplive.com/m/${status.broadNo}?t=${Date.now()}`);
+    refresh();
+    const id = setInterval(refresh, THUMB_REFRESH_MS);
+    return () => clearInterval(id);
+  }, [active, status?.broadNo]);
+
+  const openPopup = () => {
+    window.open(
+      `https://play.sooplive.com/${bjId}`,
+      `soop_${bjId}`,
+      "width=1200,height=720,toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1"
+    );
+  };
+
+  return (
+    <div className="multiview-tile">
+      <div className="multiview-tile-frame">
+        {active ? (
+          <iframe
+            src={`https://play.sooplive.com/${bjId}`}
+            title={`${status.nickname || bjId} 라이브`}
+            className="multiview-iframe"
+            allow="autoplay; encrypted-media; picture-in-picture"
+          />
+        ) : (
+          <div className="multiview-thumb" onClick={() => setActive(true)} title="클릭해서 재생">
+            {thumb
+              ? <img src={thumb} alt="라이브 화면" onError={(e) => { e.target.style.display = "none"; }} />
+              : <div className="live-banner-placeholder"><Icon name="film" size={26} /></div>
+            }
+            <div className="live-play-overlay" style={{ opacity: 1, background: "rgba(0,0,0,0.4)" }}>
+              <div className="live-play-btn"><Icon name="play" size={18} /></div>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="multiview-tile-bar">
+        {status.profileImg
+          ? <img src={status.profileImg} alt={status.nickname} className="multiview-tile-avatar" />
+          : <div className="live-profile-placeholder" style={{ width: 22, height: 22 }}><Icon name="user" size={11} /></div>
+        }
+        <span className="multiview-tile-name">{status.nickname || bjId}</span>
+        <div className="multiview-tile-actions">
+          <button className="multiview-tile-btn" onClick={openPopup} title="팝업으로 열기" aria-label="팝업으로 열기">
+            <Icon name="external" size={13} />
+          </button>
+          {active && (
+            <button className="multiview-tile-btn" onClick={() => setActive(false)} title="플레이어 닫기" aria-label="플레이어 닫기">
+              <Icon name="close" size={13} />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MultiViewMode({ liveChannels, statuses, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="multiview-overlay">
+      <div className="multiview-header">
+        <h3><span className="dot-live" />멀티뷰 · {liveChannels.length}개 동시 시청</h3>
+        <button className="multiview-close" onClick={onClose} aria-label="닫기"><Icon name="close" size={18} /></button>
+      </div>
+      <div className="multiview-grid">
+        {liveChannels.map(ch => (
+          <MultiViewTile key={ch.bjId} bjId={ch.bjId} status={statuses[ch.bjId]} />
+        ))}
+      </div>
+      <p className="multiview-hint">화면을 클릭하면 재생돼요 · 플레이어는 새 창으로도 열 수 있어요</p>
     </div>
   );
 }
@@ -178,7 +322,9 @@ function ChannelCard({ bjId, status, notifOn, onRefresh, onToggleNotif }) {
 }
 
 function Live() {
-  const { channels, statuses, notifChannels, liveCount, checkChannel, toggleNotif } = useLive();
+  const { channels, statuses, notifChannels, liveCount, history, checkChannel, toggleNotif, clearHistory } = useLive();
+  const [multiViewOpen, setMultiViewOpen] = useState(false);
+  const liveChannels = channels.filter(ch => statuses[ch.bjId]?.isLive);
 
   return (
     <div className="page">
@@ -193,6 +339,15 @@ function Live() {
           )}
         </p>
       </div>
+
+      {liveChannels.length >= 2 && (
+        <div style={{ marginBottom: "1.5rem" }}>
+          <button className="btn btn-ghost" onClick={() => setMultiViewOpen(true)}>
+            <Icon name="grid" size={13} style={{ marginRight: "0.35rem", verticalAlign: "-2px" }} />
+            멀티뷰로 동시 시청 ({liveChannels.length})
+          </button>
+        </div>
+      )}
 
       {channels.length === 0 ? (
         <div className="empty-state">
@@ -213,6 +368,19 @@ function Live() {
             />
           ))}
         </div>
+      )}
+
+      <HistoryPanel
+        history={history}
+        onClear={() => { if (window.confirm("방송 시작 기록을 모두 삭제할까요?")) clearHistory(); }}
+      />
+
+      {multiViewOpen && (
+        <MultiViewMode
+          liveChannels={liveChannels}
+          statuses={statuses}
+          onClose={() => setMultiViewOpen(false)}
+        />
       )}
     </div>
   );

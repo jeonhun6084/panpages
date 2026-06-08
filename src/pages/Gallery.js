@@ -154,35 +154,122 @@ function shuffle(arr) {
   return a;
 }
 
-const SLIDESHOW_INTERVAL_MS = 5000;
+const SLIDESHOW_SPEEDS = [
+  { value: 3000, label: "3초" },
+  { value: 5000, label: "5초" },
+  { value: 10000, label: "10초" },
+];
+const SLIDESHOW_DEFAULT_INTERVAL_MS = 5000;
+const SLIDESHOW_ALL_BOARDS = "__all__";
 
-function SlideshowMode({ images, onClose }) {
-  const order = useMemo(() => shuffle(images), [images]);
+function collectImages(post) {
+  return (post.images && post.images.length > 0) ? post.images : (post.thumbnail ? [post.thumbnail] : []);
+}
+
+function SlideshowMode({ posts, onClose }) {
+  const boardOptions = useMemo(() => {
+    const map = new Map();
+    for (const post of posts) {
+      const imgs = collectImages(post);
+      if (imgs.length === 0) continue;
+      const key = post.boardName || "기타";
+      if (!map.has(key)) map.set(key, new Set());
+      imgs.forEach(url => map.get(key).add(url));
+    }
+    return [...map.entries()].map(([name, set]) => ({ name, images: [...set] }));
+  }, [posts]);
+
+  const allImages = useMemo(() => {
+    const seen = new Set();
+    boardOptions.forEach(b => b.images.forEach(url => seen.add(url)));
+    return [...seen];
+  }, [boardOptions]);
+
+  const [boardFilter, setBoardFilter] = useState(SLIDESHOW_ALL_BOARDS);
+  const [intervalMs, setIntervalMs] = useState(SLIDESHOW_DEFAULT_INTERVAL_MS);
+  const [paused, setPaused] = useState(false);
   const [idx, setIdx] = useState(0);
 
-  useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  const images = boardFilter === SLIDESHOW_ALL_BOARDS
+    ? allImages
+    : (boardOptions.find(b => b.name === boardFilter)?.images || allImages);
+
+  const order = useMemo(() => shuffle(images), [images]);
+  useEffect(() => { setIdx(0); }, [order]);
+
+  const next = useCallback(() => setIdx(i => (order.length ? (i + 1) % order.length : 0)), [order.length]);
+  const prev = useCallback(() => setIdx(i => (order.length ? (i - 1 + order.length) % order.length : 0)), [order.length]);
 
   useEffect(() => {
-    if (order.length < 2) return;
-    const id = setInterval(() => setIdx(i => (i + 1) % order.length), SLIDESHOW_INTERVAL_MS);
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+      else if (e.key === " " || e.code === "Space") { e.preventDefault(); setPaused(p => !p); }
+      else if (e.key === "ArrowRight") next();
+      else if (e.key === "ArrowLeft") prev();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose, next, prev]);
+
+  useEffect(() => {
+    if (paused || order.length < 2) return;
+    const id = setInterval(next, intervalMs);
     return () => clearInterval(id);
-  }, [order.length]);
+  }, [paused, order.length, intervalMs, next, idx]);
 
   const current = order[idx];
 
   return (
     <div className="slideshow-overlay" onClick={onClose}>
       <button className="slideshow-close" onClick={onClose} aria-label="닫기"><Icon name="close" size={20} /></button>
-      <span className="slideshow-counter">{idx + 1} / {order.length}</span>
+      <span className="slideshow-counter">{order.length ? idx + 1 : 0} / {order.length}</span>
+
       {current && (
         <img key={current} src={current} alt="" className="slideshow-img" onClick={(e) => e.stopPropagation()} />
       )}
+
       <div className="slideshow-progress">
-        <div key={idx} className="slideshow-progress-bar" />
+        <div
+          key={idx}
+          className="slideshow-progress-bar"
+          style={{ animationDuration: `${intervalMs}ms`, animationPlayState: paused ? "paused" : "running" }}
+        />
+      </div>
+
+      <div className="slideshow-controls" onClick={(e) => e.stopPropagation()}>
+        <div className="slideshow-playback">
+          <button className="slideshow-nav-btn" onClick={prev} disabled={order.length < 2} aria-label="이전 이미지">‹</button>
+          <button className="slideshow-nav-btn slideshow-play-btn" onClick={() => setPaused(p => !p)} aria-label={paused ? "재생" : "일시정지"}>
+            <Icon name={paused ? "play" : "pause"} size={18} />
+          </button>
+          <button className="slideshow-nav-btn" onClick={next} disabled={order.length < 2} aria-label="다음 이미지">›</button>
+        </div>
+
+        {boardOptions.length > 1 && (
+          <div className="slideshow-filter-group">
+            <button
+              className={`slideshow-chip${boardFilter === SLIDESHOW_ALL_BOARDS ? " active" : ""}`}
+              onClick={() => setBoardFilter(SLIDESHOW_ALL_BOARDS)}
+            >전체</button>
+            {boardOptions.map(b => (
+              <button
+                key={b.name}
+                className={`slideshow-chip${boardFilter === b.name ? " active" : ""}`}
+                onClick={() => setBoardFilter(b.name)}
+              >{b.name}</button>
+            ))}
+          </div>
+        )}
+
+        <div className="slideshow-filter-group">
+          {SLIDESHOW_SPEEDS.map(({ value, label }) => (
+            <button
+              key={value}
+              className={`slideshow-chip${intervalMs === value ? " active" : ""}`}
+              onClick={() => setIntervalMs(value)}
+            >{label}</button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -205,6 +292,7 @@ function Gallery() {
   const [dateFilter, setDateFilter] = useState("all");
   const [lightbox, setLightbox] = useState(null);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(null);
 
   // ref로 최신값 관리 → loadMore 클로저 stale 문제 완전 해결
   const loadingRef = useRef(false);
@@ -369,6 +457,31 @@ function Gallery() {
     return [...seen];
   }, [posts]);
 
+  const downloadAllImages = useCallback(async () => {
+    if (allImages.length === 0 || downloadProgress) return;
+    if (!window.confirm(`이미지 ${allImages.length}장을 순서대로 다운로드할까요?`)) return;
+    setDownloadProgress({ current: 0, total: allImages.length });
+    for (let i = 0; i < allImages.length; i++) {
+      const url = allImages[i];
+      try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const ext = (url.match(/\.(\w+)(?:\?|$)/)?.[1] || "jpg").toLowerCase();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl;
+        a.download = `${currentBjId || "gallery"}_${String(i + 1).padStart(3, "0")}.${ext}`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objUrl);
+      } catch { /* skip failed image */ }
+      setDownloadProgress({ current: i + 1, total: allImages.length });
+      await new Promise(r => setTimeout(r, 300));
+    }
+    setDownloadProgress(null);
+  }, [allImages, currentBjId, downloadProgress]);
+
   const clearCookies = async () => {
     if (!window.confirm("저장된 쿠키를 삭제하고 다음에 재로그인할까요?")) return;
     try {
@@ -404,6 +517,19 @@ function Gallery() {
             <button className="btn btn-ghost" onClick={() => setSlideshowOpen(true)} style={{ whiteSpace: "nowrap" }}>
               <Icon name="play" size={13} style={{ marginRight: "0.35rem", verticalAlign: "-2px" }} />
               갤러리 구경 모드
+            </button>
+          )}
+          {allImages.length > 0 && (
+            <button
+              className="btn btn-ghost"
+              onClick={downloadAllImages}
+              disabled={!!downloadProgress}
+              style={{ whiteSpace: "nowrap" }}
+            >
+              <Icon name="download" size={13} style={{ marginRight: "0.35rem", verticalAlign: "-2px" }} />
+              {downloadProgress
+                ? `다운로드 중... ${downloadProgress.current}/${downloadProgress.total}`
+                : `이미지 일괄 다운로드 (${allImages.length})`}
             </button>
           )}
           {currentBjId && (
@@ -514,7 +640,7 @@ function Gallery() {
       )}
 
       {lightbox && <Lightbox post={lightbox} onClose={() => setLightbox(null)} />}
-      {slideshowOpen && <SlideshowMode images={allImages} onClose={() => setSlideshowOpen(false)} />}
+      {slideshowOpen && <SlideshowMode posts={posts} onClose={() => setSlideshowOpen(false)} />}
     </div>
   );
 }
