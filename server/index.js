@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const { scrapePosts, scrapeBoards } = require('./soop');
+const { scrapePosts, scrapeBoards, scrapeNotices } = require('./soop');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -52,6 +52,22 @@ app.get('/api/posts/:bjId', async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error('[server] posts 오류:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 공지 목록
+app.get('/api/notices/:bjId', async (req, res) => {
+  const { bjId } = req.params;
+  if (!validateBjId(bjId)) return res.status(400).json({ error: '올바른 SOOP 아이디를 입력하세요.' });
+
+  const limit = Math.min(20, Math.max(1, parseInt(req.query.limit) || 5));
+  try {
+    const { soopId, soopPw, soopPw2 } = getSoopCreds();
+    const result = await scrapeNotices(bjId, soopId, soopPw, soopPw2, limit);
+    res.json(result);
+  } catch (err) {
+    console.error('[server] notices 오류:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

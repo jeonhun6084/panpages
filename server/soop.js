@@ -208,9 +208,15 @@ async function getBoardPosts(bjId, boardNo, page, cookieHeader) {
     ? `${API_BASE}/${bjId}/board?page=${page}`
     : `${API_BASE}/${bjId}/board?bbsNo=${boardNo}&page=${page}`;
   const r = await apiGet(url, cookieHeader);
-  if (r.status !== 200 || !r.data || !r.data.contents) return { posts: [], total: 0, lastPage: 1 };
+  if (r.status !== 200 || !r.data) return { posts: [], total: 0, lastPage: 1 };
 
-  const posts = r.data.contents
+  // noticeData(핀고정 공지)와 contents(일반 포스트)를 합친다
+  const rawItems = [
+    ...(r.data.noticeData || []),
+    ...(r.data.contents || []),
+  ];
+
+  const posts = rawItems
     .filter(item => !shouldSkip(item.titleName || ''))
     .map(item => {
       const images = extractImages(item);
@@ -276,4 +282,32 @@ async function scrapeBoards(bjId, soopId, soopPw, soopPw2 = '') {
   return getBoards(bjId, cookieHeader);
 }
 
-module.exports = { scrapePosts, scrapeBoards };
+async function scrapeNotices(bjId, soopId, soopPw, soopPw2 = '', limit = 5) {
+  console.log(`[soop] ${bjId} 최신 소식 조회`);
+  const cookies = await ensureCookies(soopId, soopPw, soopPw2);
+  const cookieHeader = cookies.length > 0 ? cookiesToHeader(cookies) : '';
+
+  const menuR = await apiGet(`${API_BASE}/${bjId}/menu`, cookieHeader);
+  const boards = menuR.status === 200 && menuR.data ? (menuR.data.board || []) : [];
+
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const withinWeek = (posts) =>
+    posts
+      .filter(p => p.date && new Date(p.date.replace(' ', 'T')).getTime() >= cutoff)
+      .sort((a, b) => new Date(b.date.replace(' ', 'T')) - new Date(a.date.replace(' ', 'T')))
+      .slice(0, limit);
+
+  // 1순위: 공지 게시판
+  const noticeBoard = boards.find(b => (b.name || '').includes('공지'));
+  if (noticeBoard) {
+    const result = await getBoardPosts(bjId, noticeBoard.bbsNo, 1, cookieHeader);
+    const recent = withinWeek(result.posts);
+    if (recent.length > 0) return { notices: recent, source: 'notice' };
+  }
+
+  // 2순위: 전체 게시판
+  const result = await getBoardPosts(bjId, null, 1, cookieHeader);
+  return { notices: withinWeek(result.posts), source: 'all' };
+}
+
+module.exports = { scrapePosts, scrapeBoards, scrapeNotices };

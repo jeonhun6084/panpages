@@ -1,6 +1,40 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useLive } from "../context/LiveContext";
+import { useGalleryFavs } from "../hooks/useGalleryFavs";
+import Icon from "../components/Icon";
 
 const API_BASE = "http://localhost:3001";
+
+function MetaItem({ icon, children }) {
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+      <Icon name={icon} size={13} />
+      {children}
+    </span>
+  );
+}
+
+function FavsBar({ favs, statuses, onSelect }) {
+  if (favs.length === 0) return null;
+  return (
+    <div className="gallery-favs-bar">
+      <span className="gallery-favs-label">즐겨찾기</span>
+      {favs.map(bjId => {
+        const st = statuses[bjId];
+        const label = st?.nickname || bjId;
+        return (
+          <button key={bjId} className="gallery-fav-chip" onClick={() => onSelect(bjId)}>
+            {st?.isLive && <span className="gallery-fav-live-dot" />}
+            {st?.profileImg && (
+              <img src={st.profileImg} alt={label} className="gallery-fav-avatar" />
+            )}
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function PostCard({ post, onOpen }) {
   return (
@@ -36,9 +70,9 @@ function PostCard({ post, onOpen }) {
         <div className="gallery-item-meta">
           {post.author && <span>{post.author}</span>}
           {post.boardName && <span className="gallery-board-tag">{post.boardName}</span>}
-          {post.views && <span>👁 {post.views}</span>}
-          {post.comments && <span>💬 {post.comments}</span>}
-          {post.likes && post.likes !== "0" && <span>❤️ {post.likes}</span>}
+          {post.views && <MetaItem icon="eye">{post.views}</MetaItem>}
+          {post.comments && <MetaItem icon="chat">{post.comments}</MetaItem>}
+          {post.likes && post.likes !== "0" && <MetaItem icon="heart">{post.likes}</MetaItem>}
           {post.date && <span>{post.date.split(" ")[0]}</span>}
         </div>
       </div>
@@ -71,7 +105,7 @@ function Lightbox({ post, onClose }) {
             {images.length > 1 && (
               <span style={{ fontSize: "0.8rem", color: "var(--text-muted)" }}>{idx + 1} / {images.length}</span>
             )}
-            <button className="modal-close" onClick={onClose}>✕</button>
+            <button className="modal-close" onClick={onClose} aria-label="닫기"><Icon name="close" size={16} /></button>
           </div>
         </div>
 
@@ -89,11 +123,11 @@ function Lightbox({ post, onClose }) {
 
         <div className="modal-gallery-body">
           <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", color: "var(--text-muted)", fontSize: "0.85rem", marginBottom: "0.75rem" }}>
-            {post.author && <span>✍️ {post.author}</span>}
-            {post.views && <span>👁 {post.views}</span>}
-            {post.comments && <span>💬 {post.comments}</span>}
-            {post.likes && post.likes !== "0" && <span>❤️ {post.likes}</span>}
-            {post.date && <span>📅 {post.date.split(" ")[0]}</span>}
+            {post.author && <MetaItem icon="pencil">{post.author}</MetaItem>}
+            {post.views && <MetaItem icon="eye">{post.views}</MetaItem>}
+            {post.comments && <MetaItem icon="chat">{post.comments}</MetaItem>}
+            {post.likes && post.likes !== "0" && <MetaItem icon="heart">{post.likes}</MetaItem>}
+            {post.date && <MetaItem icon="calendar">{post.date.split(" ")[0]}</MetaItem>}
           </div>
           {images.length > 1 && (
             <div className="lightbox-dots">
@@ -111,7 +145,52 @@ function Lightbox({ post, onClose }) {
   );
 }
 
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+const SLIDESHOW_INTERVAL_MS = 5000;
+
+function SlideshowMode({ images, onClose }) {
+  const order = useMemo(() => shuffle(images), [images]);
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (order.length < 2) return;
+    const id = setInterval(() => setIdx(i => (i + 1) % order.length), SLIDESHOW_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [order.length]);
+
+  const current = order[idx];
+
+  return (
+    <div className="slideshow-overlay" onClick={onClose}>
+      <button className="slideshow-close" onClick={onClose} aria-label="닫기"><Icon name="close" size={20} /></button>
+      <span className="slideshow-counter">{idx + 1} / {order.length}</span>
+      {current && (
+        <img key={current} src={current} alt="" className="slideshow-img" onClick={(e) => e.stopPropagation()} />
+      )}
+      <div className="slideshow-progress">
+        <div key={idx} className="slideshow-progress-bar" />
+      </div>
+    </div>
+  );
+}
+
 function Gallery() {
+  const { statuses } = useLive();
+  const { favs } = useGalleryFavs();
   const [bjIdInput, setBjIdInput] = useState(() => localStorage.getItem("fp-bjid") || "");
   const [currentBjId, setCurrentBjId] = useState("");
   const [boards, setBoards] = useState([]);
@@ -125,6 +204,7 @@ function Gallery() {
   const [query, setQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all");
   const [lightbox, setLightbox] = useState(null);
+  const [slideshowOpen, setSlideshowOpen] = useState(false);
 
   // ref로 최신값 관리 → loadMore 클로저 stale 문제 완전 해결
   const loadingRef = useRef(false);
@@ -191,6 +271,7 @@ function Gallery() {
       );
 
       const filtered = checked.filter(Boolean);
+      filtered.sort((a, b) => (b.displayType === 106 ? 1 : 0) - (a.displayType === 106 ? 1 : 0));
       setBoards(filtered);
       return filtered;
     } catch {
@@ -224,9 +305,10 @@ function Gallery() {
     setDateFilter("all");
   };
 
-  const search = async () => {
-    const id = bjIdInput.trim();
+  const search = useCallback(async (overrideId) => {
+    const id = (overrideId !== undefined ? overrideId : bjIdInput).trim();
     if (!id) return;
+    setBjIdInput(id);
     localStorage.setItem("fp-bjid", id);
     setCurrentBjId(id);
     currentBjIdRef.current = id;
@@ -244,7 +326,7 @@ function Gallery() {
     selectedBoardRef.current = apiBbsNo;
     setSelectedBoard(bbsNo);
     fetchPosts(id, apiBbsNo, 1);
-  };
+  }, [bjIdInput, fetchBoards, fetchPosts]);
 
   const changeBoard = (board) => {
     const bbsNo = board ? board.bbsNo : null;
@@ -278,6 +360,15 @@ function Gallery() {
     return r;
   }, [posts, query, dateFilter]);
 
+  const allImages = useMemo(() => {
+    const seen = new Set();
+    for (const post of posts) {
+      const imgs = (post.images && post.images.length > 0) ? post.images : (post.thumbnail ? [post.thumbnail] : []);
+      for (const url of imgs) seen.add(url);
+    }
+    return [...seen];
+  }, [posts]);
+
   const clearCookies = async () => {
     if (!window.confirm("저장된 쿠키를 삭제하고 다음에 재로그인할까요?")) return;
     try {
@@ -293,6 +384,8 @@ function Gallery() {
         <p>SOOP 방송국 게시판을 카드형으로 재구성해요. 로컬 서버(port 3001)가 필요해요.</p>
       </div>
 
+      <FavsBar favs={favs} statuses={statuses} onSelect={(id) => search(id)} />
+
       <div className="gallery-controls">
         <div className="add-form" style={{ margin: 0, flex: 1 }}>
           <input
@@ -302,11 +395,17 @@ function Gallery() {
             onChange={(e) => setBjIdInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && search()}
           />
-          <button className="btn" onClick={search} disabled={loading || loadingBoards}>
+          <button className="btn" onClick={() => search()} disabled={loading || loadingBoards}>
             {loading || loadingBoards ? "불러오는 중..." : "불러오기"}
           </button>
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
+          {allImages.length > 1 && (
+            <button className="btn btn-ghost" onClick={() => setSlideshowOpen(true)} style={{ whiteSpace: "nowrap" }}>
+              <Icon name="play" size={13} style={{ marginRight: "0.35rem", verticalAlign: "-2px" }} />
+              갤러리 구경 모드
+            </button>
+          )}
           {currentBjId && (
             <a href={`https://www.sooplive.com/station/${currentBjId}/post`} target="_blank" rel="noopener noreferrer" className="btn btn-ghost" style={{ whiteSpace: "nowrap" }}>
               원본 보기
@@ -341,10 +440,10 @@ function Gallery() {
           />
           <div className="date-filter-chips">
             {[
+              { value: "all", label: "전체" },
               { value: "7d", label: "7일" },
               { value: "30d", label: "30일" },
               { value: "3m", label: "3개월" },
-              { value: "all", label: "전체" },
             ].map(({ value, label }) => (
               <button
                 key={value}
@@ -367,7 +466,6 @@ function Gallery() {
 
       {loading && posts.length === 0 && (
         <div className="loading-spinner">
-          <div style={{ fontSize: "1.5rem", marginBottom: "0.75rem" }}>⏳</div>
           SOOP 게시글 불러오는 중...<br />
           <span style={{ fontSize: "0.82rem", opacity: 0.7 }}>처음 실행 시 쿠키 로그인이 필요해요 (30초~1분)</span>
         </div>
@@ -375,7 +473,7 @@ function Gallery() {
 
       {!loading && !loaded && !error && (
         <div className="empty-state">
-          <div className="empty-icon">📸</div>
+          <div className="empty-icon"><Icon name="camera" size={40} /></div>
           <h3>아이디를 입력하면 게시판이 표시돼요</h3>
           <p>SOOP 아이디를 입력하고 불러오기를 눌러보세요.</p>
         </div>
@@ -383,7 +481,7 @@ function Gallery() {
 
       {!loading && loaded && filteredPosts.length === 0 && (
         <div className="empty-state">
-          <div className="empty-icon">{posts.length === 0 ? "🔍" : "🔎"}</div>
+          <div className="empty-icon"><Icon name="search" size={40} /></div>
           <h3>{posts.length === 0 ? "게시글을 찾지 못했어요" : "검색 결과가 없어요"}</h3>
           <p>{posts.length === 0 ? "아이디를 확인하거나 서버 로그를 살펴보세요." : "다른 키워드나 기간으로 검색해보세요."}</p>
         </div>
@@ -416,6 +514,7 @@ function Gallery() {
       )}
 
       {lightbox && <Lightbox post={lightbox} onClose={() => setLightbox(null)} />}
+      {slideshowOpen && <SlideshowMode images={allImages} onClose={() => setSlideshowOpen(false)} />}
     </div>
   );
 }
